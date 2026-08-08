@@ -7,9 +7,6 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: Login to GHCR
-        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u slaid099 --password-stdin
-
       - name: Login to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
