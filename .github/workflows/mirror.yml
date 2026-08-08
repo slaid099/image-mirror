@@ -1,0 +1,26 @@
+name: Mirror GHCR to Docker Hub
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GHCR
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u slaid099 --password-stdin
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Mirror image-gen
+        run: |
+          docker pull ghcr.io/slaid099/image-gen:latest
+          docker tag ghcr.io/slaid099/image-gen:latest ${{ secrets.DOCKERHUB_USERNAME }}/image-gen:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/image-gen:latest
+
+      - name: Mirror video-gen
+        run: |
+          docker pull ghcr.io/slaid099/video-gen:latest
+          docker tag ghcr.io/slaid099/video-gen:latest ${{ secrets.DOCKERHUB_USERNAME }}/video-gen:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/video-gen:latest
