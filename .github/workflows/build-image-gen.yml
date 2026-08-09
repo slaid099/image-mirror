@@ -1,0 +1,32 @@
+name: Build image-gen (Dockerfile.full)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download FemaleBody_milf_9 LoRA from Forgejo Packages
+        run: |
+          curl -L -H "Authorization: token ${{ secrets.FORGEJO_TOKEN }}" \
+            -o FemaleBody_milf_9.safetensors \
+            "https://git.slaid098.dev/api/packages/slaid098/generic/loras/1.0.0/FemaleBody_milf_9.safetensors"
+          ls -lh FemaleBody_milf_9.safetensors
+
+      - name: Copy start.sh and Dockerfile to build context
+        run: |
+          cp build/image-gen/start.sh .
+          cp build/image-gen/Dockerfile .
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u slaid099 --password-stdin
+
+      - name: Build image
+        run: docker build --build-arg CIVITAI_TOKEN=${{ secrets.CIVITAI_TOKEN }} -t ghcr.io/slaid099/image-gen:latest .
+
+      - name: Push to GHCR
+        run: docker push ghcr.io/slaid099/image-gen:latest
