@@ -23,10 +23,11 @@ RUN mkdir /var/run/sshd && \
 # 4. Установка ComfyUI
 WORKDIR /workspace/ComfyUI
 RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI .
-# Пинним comfy-kitchen==0.1.0 (0.2.x ломается на torch 2.6.0: list[int] в infer_schema)
-# Заменяем ЛЮБУЮ версию comfy-kitchen (>=, ==, без версии) на ==0.1.0
+# Пинним comfy-kitchen==0.2.7 (доказанно рабочая версия из video-gen:v2 на Python 3.11 + torch 2.6.0)
+# 0.1.0 требует Python>=3.12, 0.2.7+ требуют >=3.10. Версии 0.2.27/0.2.28 ломаются на torch 2.6 (list[int] в na.py)
+# Заменяем ЛЮБУЮ версию comfy-kitchen на ==0.2.7
 # Удаляем torch/torchvision/torchaudio из requirements — оставляем 2.6.0 из базового образа
-RUN sed -i -E 's/^comfy-kitchen.*/comfy-kitchen==0.1.0/' requirements.txt && \
+RUN sed -i -E 's/^comfy-kitchen.*/comfy-kitchen==0.2.7/' requirements.txt && \
     sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' requirements.txt && \
     uv pip install --system --break-system-packages -r requirements.txt
 RUN uv pip install --system --break-system-packages huggingface_hub requests
