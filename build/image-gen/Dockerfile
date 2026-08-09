@@ -23,8 +23,10 @@ RUN mkdir /var/run/sshd && \
 # 4. Установка ComfyUI
 WORKDIR /workspace/ComfyUI
 RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI .
-# Исключаем torch/torchvision/torchaudio из requirements — оставляем 2.6.0 из базового образа
-RUN sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' requirements.txt && \
+# Пинним comfy-kitchen==0.1.0 (0.2.x ломается на torch 2.6.0: list[int] в infer_schema)
+# Удаляем torch/torchvision/torchaudio из requirements — оставляем 2.6.0 из базового образа
+RUN sed -i 's/comfy-kitchen>=.*/comfy-kitchen==0.1.0/' requirements.txt && \
+    sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' requirements.txt && \
     uv pip install --system --break-system-packages -r requirements.txt
 RUN uv pip install --system --break-system-packages huggingface_hub requests
 
