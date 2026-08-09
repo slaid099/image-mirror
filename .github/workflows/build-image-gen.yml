@@ -26,11 +26,11 @@ jobs:
           cp build/image-gen/start.sh .
           cp build/image-gen/Dockerfile .
 
-      - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
       - name: Build image
         run: docker build --build-arg CIVITAI_TOKEN=${{ secrets.CIVITAI_TOKEN }} -t ghcr.io/slaid099/image-gen:latest .
+
+      - name: Login to GHCR (PAT)
+        run: docker login ghcr.io -u slaid099 -p ${{ secrets.GHCR_PAT }}
 
       - name: Push to GHCR
         run: docker push ghcr.io/slaid099/image-gen:latest
