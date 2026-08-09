@@ -35,7 +35,7 @@ RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
 # Пинним comfy-kitchen==0.1.0 (0.2.x ломается на torch 2.6.0: list[int] в infer_schema)
 # Удаляем torch/torchvision/torchaudio из requirements — оставляем 2.6.0 из базового образа
 WORKDIR /workspace/ComfyUI
-RUN sed -i 's/comfy-kitchen>=.*/comfy-kitchen==0.1.0/' requirements.txt && \
+RUN sed -i 's/^comfy-kitchen.*/comfy-kitchen==0.1.0/' requirements.txt && \
     sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' requirements.txt && \
     uv pip install --system --break-system-packages -r requirements.txt
 RUN find custom_nodes -maxdepth 2 -name "requirements.txt" -exec sh -c 'cat {}; echo ""' \; > all_reqs.txt && \
