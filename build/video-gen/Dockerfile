@@ -32,10 +32,12 @@ RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     git clone https://github.com/kijai/ComfyUI-KJNodes.git
 
 # 5. Установка зависимостей
-# Пинним comfy-kitchen==0.1.0 (0.2.x ломается на torch 2.6.0: list[int] в infer_schema)
+# Пинним comfy-kitchen==0.2.7 (доказанно рабочая версия из video-gen:v2 на Python 3.11 + torch 2.6.0)
+# 0.1.0 требует Python>=3.12, 0.2.7+ требуют >=3.10. Версии 0.2.27/0.2.28 ломаются на torch 2.6 (list[int] в na.py)
+# Заменяем ЛЮБУЮ версию comfy-kitchen на ==0.2.7
 # Удаляем torch/torchvision/torchaudio из requirements — оставляем 2.6.0 из базового образа
 WORKDIR /workspace/ComfyUI
-RUN sed -i 's/^comfy-kitchen.*/comfy-kitchen==0.1.0/' requirements.txt && \
+RUN sed -i -E 's/^comfy-kitchen.*/comfy-kitchen==0.2.7/' requirements.txt && \
     sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' requirements.txt && \
     uv pip install --system --break-system-packages -r requirements.txt
 RUN find custom_nodes -maxdepth 2 -name "requirements.txt" -exec sh -c 'cat {}; echo ""' \; > all_reqs.txt && \
