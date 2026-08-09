@@ -1,0 +1,20 @@
+name: Test GHCR push (PAT check)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GHCR (PAT)
+        run: docker login ghcr.io -u slaid099 -p ${{ secrets.GHCR_PAT }}
+
+      - name: Build dummy image
+        run: |
+          echo 'FROM alpine:latest' > Dockerfile.dummy
+          echo 'RUN echo test' >> Dockerfile.dummy
+          docker build -t ghcr.io/slaid099/image-gen:latest -f Dockerfile.dummy .
+
+      - name: Push to GHCR
+        run: docker push ghcr.io/slaid099/image-gen:latest
