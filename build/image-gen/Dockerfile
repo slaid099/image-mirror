@@ -23,8 +23,9 @@ RUN mkdir /var/run/sshd && \
 # 4. Установка ComfyUI
 WORKDIR /workspace/ComfyUI
 RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI .
-RUN uv pip install --system --break-system-packages -r requirements.txt --no-deps torch torchvision torchaudio
-RUN uv pip install --system --break-system-packages -r requirements.txt
+# Исключаем torch/torchvision/torchaudio из requirements — оставляем 2.6.0 из базового образа
+RUN sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' requirements.txt && \
+    uv pip install --system --break-system-packages -r requirements.txt
 RUN uv pip install --system --break-system-packages huggingface_hub requests
 
 # 5. Установка ComfyUI-Manager
