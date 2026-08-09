@@ -1,0 +1,29 @@
+name: Build video-gen (Dockerfile.fast)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy start.sh and Dockerfile to build context
+        run: |
+          cp build/video-gen/start.sh .
+          cp build/video-gen/Dockerfile .
+
+      - name: Build image
+        run: docker build --build-arg CIVITAI_TOKEN=${{ secrets.CIVITAI_TOKEN }} -t ghcr.io/slaid099/video-gen:latest .
+
+      - name: Login to GHCR (PAT)
+        run: docker login ghcr.io -u slaid099 -p ${{ secrets.GHCR_PAT }}
+
+      - name: Push to GHCR
+        run: docker push ghcr.io/slaid099/video-gen:latest
