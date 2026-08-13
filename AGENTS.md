@@ -47,6 +47,13 @@ gh api -X PUT "/repos/slaid099/image-mirror/contents/<path>" --input $jsonPath -
 - PAT `ghp_...` fails `docker login ghcr.io --password-stdin` in GitHub Actions (`denied: denied`)
 - **Use `-p` flag**: `docker login ghcr.io -u slaid099 -p ${{ secrets.GHCR_PAT }}`
 
+### 5. ComfyUI HEAD after 11 Aug 2026 requires `comfy_kitchen.int8_attention_is_available()`
+- ComfyUI PR #15479 (commit `bf4c9a08`, merged 11 Aug 2026) calls `comfy_kitchen.int8_attention_is_available()` at startup
+- This function does **not exist** in pinned `comfy-kitchen==0.2.7` → `AttributeError` → ComfyUI crash
+- `comfy-kitchen==0.2.30+` has the function, but **breaks on torch 2.6.0** (`list[int]` PEP 585 bug in `na.py`)
+- **Fix**: pin ComfyUI itself to commit `4f3544d1` (last commit before PR #15479) via `git checkout` after clone
+- See "Version Pinning → ComfyUI commit pin" below for the exact Dockerfile pattern
+
 ## Version Pinning
 
 ### comfy-kitchen == 0.2.7 (CRITICAL)
@@ -57,9 +64,21 @@ gh api -X PUT "/repos/slaid099/image-mirror/contents/<path>" --input $jsonPath -
 | **0.2.7** | **`>=3.10`** | **2026-01-17** | **YES — proven working** |
 | 0.2.28 | `>=3.10` | 2026-08-07 | NO — `list[int]` bug in `na.py:163` |
 
-**Bug in 0.2.27+**: `comfy_kitchen/backends/eager/na.py:163` uses PEP 585 `list[int]` annotation in `@torch.library.custom_op`. `torch.library.infer_schema` in torch 2.6.0 doesn't support `list[int]` (only `typing.List[int]`/`typing.Sequence[int]`). Result: `ValueError` at import → ComfyUI never starts.
+**Bug in 0.2.28+**: `comfy_kitchen/backends/eager/na.py:163` uses PEP 585 `list[int]` annotation in `@torch.library.custom_op`. `torch.library.infer_schema` in torch 2.6.0 doesn't support `list[int]` (only `typing.List[int]`/`typing.Sequence[int]`). Result: `ValueError` at import → ComfyUI never starts. (0.2.27 is working — the bug in `na.py` appeared only in 0.2.28.)
 
 **0.2.7 is the last working version** — proven in `video-gen:v2` (built Feb 28 2026, used successfully through Aug 2026).
+
+### ComfyUI commit pin (CRITICAL — after 11 Aug 2026)
+
+ComfyUI `HEAD` on `master` after 11 Aug 2026 (PR #15479, commit `bf4c9a08`) calls `comfy_kitchen.int8_attention_is_available()` at startup. This function doesn't exist in pinned `comfy-kitchen==0.2.7` → `AttributeError`. Versions `0.2.30+` have the function but break on torch 2.6.0 (see comfy-kitchen table above). **Pin ComfyUI itself** to commit `4f3544d1` (last commit before PR #15479):
+
+```dockerfile
+WORKDIR /workspace/ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI . && \
+    git checkout 4f3544d131652678c8070b306f01cce392465cb5
+```
+
+Do NOT use `git clone --depth 1` — shallow clones may not contain the pinned commit. Full clone + checkout is ~5 MB extra, negligible vs the 33 GB image.
 
 ### torch/torchvision/torchaudio — keep 2.6.0 from base image
 

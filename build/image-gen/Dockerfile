@@ -22,9 +22,12 @@ RUN mkdir /var/run/sshd && \
 
 # 4. Установка ComfyUI
 WORKDIR /workspace/ComfyUI
-RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI .
-# Пинним comfy-kitchen==0.2.7 (доказанно рабочая версия из video-gen:v2 на Python 3.11 + torch 2.6.0)
-# 0.1.0 требует Python>=3.12, 0.2.7+ требуют >=3.10. Версии 0.2.27/0.2.28 ломаются на torch 2.6 (list[int] в na.py)
+RUN git clone https://github.com/comfyanonymous/ComfyUI . && \
+    git checkout 4f3544d131652678c8070b306f01cce392465cb5
+# Пинним ComfyUI на commit 4f3544d1 (до PR #15479 от 11 Aug 2026, который добавил вызов
+# comfy_kitchen.int8_attention_is_available() — этой функции нет в 0.2.7, а 0.2.30+ ломаются на torch 2.6).
+# Пинним comfy-kitchen==0.2.7 (доказанно рабочая версия из video-gen:v2 на Python 3.11 + torch 2.6.0).
+# 0.1.0 требует Python>=3.12, 0.2.7 — последняя рабочая на torch 2.6.0. 0.2.28+ ломаются (list[int] в na.py).
 # Заменяем ЛЮБУЮ версию comfy-kitchen на ==0.2.7
 # Удаляем torch/torchvision/torchaudio из requirements — оставляем 2.6.0 из базового образа
 RUN sed -i -E 's/^comfy-kitchen.*/comfy-kitchen==0.2.7/' requirements.txt && \
