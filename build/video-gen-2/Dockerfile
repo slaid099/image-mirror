@@ -49,13 +49,18 @@ COPY models/vae/ltx-2.5-audio-vae-bf16.safetensors \
 COPY models/latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors \
     latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors
 
-# 7. Установка зависимостей (рабочая связка эталонного GPU-сервера):
-#    torch 2.14.0+cu130 + comfy-kitchen 0.2.35 — обязательная пара для LTX-2.5 int8
+# 7. Установка зависимостей (связка, проверенная на vast.ai L40S с драйвером CUDA 12.6):
+#    torch 2.13.0+cu129 + comfy-kitchen 0.2.35 — обязательная пара для LTX-2.5 int8.
+#    ВАЖНО: только cu12x-сборки — cu130 требует драйвер CUDA 13 и падает на хостах vast с 12.6.
+#    ВАЖНО: версии с ЯВНЫМ локальным тегом (+cu129) — без него pip выбирает +cu130
+#    по лексикографическому правилу и тянет wheel из PyPI (несовместимый libcudart.so.13)
 WORKDIR /workspace/ComfyUI
 RUN uv pip install --system --break-system-packages -r requirements.txt
 RUN uv pip install --system --break-system-packages \
-    torch==2.14.0 torchvision==0.29.0 torchaudio==2.11.0 \
-    --index-url https://download.pytorch.org/whl/cu130 && \
+    torch==2.13.0+cu129 torchvision==0.28.0+cu129 \
+    --index-url https://download.pytorch.org/whl/cu129 && \
+    uv pip install --system --break-system-packages --no-deps \
+    torchaudio==2.11.0+cu129 --index-url https://download.pytorch.org/whl/cu129 && \
     uv pip install --system --break-system-packages comfy-kitchen==0.2.35
 RUN find custom_nodes -maxdepth 2 -name "requirements.txt" -exec sh -c 'cat {}; echo ""' \; > all_reqs.txt && \
     sed -i '/^comfy-kitchen/d;/^torch$/d;/^torchvision$/d;/^torchaudio$/d' all_reqs.txt && \
