@@ -28,22 +28,13 @@ WORKDIR /workspace/ComfyUI/custom_nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git && \
     git clone https://github.com/Kijai/ComfyUI-VideoHelperSuite.git
 
-# 5. Установка зависимостей
-# Пинним comfy-kitchen==0.2.7 (доказанно рабочая версия на Python 3.11 + torch 2.6.0,
-# как в video-gen v1). Удаляем torch/torchvision/torchaudio — оставляем 2.6.0 из базового образа
+# 5. Готовим requirements: убираем torch (заменяем на 2.14) и comfy-kitchen
+#    (свежий ComfyUI жёстко требует comfy-kitchen 0.2.35, пин 0.2.7 ломает импорт)
 WORKDIR /workspace/ComfyUI
-RUN sed -i -E 's/^comfy-kitchen.*/comfy-kitchen==0.2.7/' requirements.txt && \
-    sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' requirements.txt && \
-    uv pip install --system --break-system-packages -r requirements.txt
-RUN find custom_nodes -maxdepth 2 -name "requirements.txt" -exec sh -c 'cat {}; echo ""' \; > all_reqs.txt && \
-    sed -i -E 's/^comfy-kitchen.*/comfy-kitchen==0.2.7/' all_reqs.txt && \
-    sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d' all_reqs.txt && \
-    uv pip install --system --break-system-packages -r all_reqs.txt
-RUN uv pip install --system --break-system-packages \
-    huggingface_hub requests imageio-ffmpeg sageattention scikit-image opencv-python
+RUN sed -i '/^torch$/d;/^torchvision$/d;/^torchaudio$/d;/^comfy-kitchen/d' requirements.txt
 
-# 6. Модели LTX-2.5 (int8-сборка под ComfyUI) — из build-контекста
-# Каждый файл в отдельном слое
+# 6. МОДЕЛИ — копируем РАНЬШЕ pip-шагов, чтобы правки зависимостей
+#    не инвалидировали 48 GB слоёв при пересборке
 WORKDIR /workspace/ComfyUI/models
 COPY models/diffusion_models/ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors \
     diffusion_models/ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors
@@ -58,12 +49,26 @@ COPY models/vae/ltx-2.5-audio-vae-bf16.safetensors \
 COPY models/latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors \
     latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors
 
-# 7. Настройка SSH для Vast.ai
+# 7. Установка зависимостей (рабочая связка эталонного GPU-сервера):
+#    torch 2.14.0+cu130 + comfy-kitchen 0.2.35 — обязательная пара для LTX-2.5 int8
+WORKDIR /workspace/ComfyUI
+RUN uv pip install --system --break-system-packages -r requirements.txt
+RUN uv pip install --system --break-system-packages \
+    torch==2.14.0 torchvision==0.29.0 torchaudio==2.11.0 \
+    --index-url https://download.pytorch.org/whl/cu130 && \
+    uv pip install --system --break-system-packages comfy-kitchen==0.2.35
+RUN find custom_nodes -maxdepth 2 -name "requirements.txt" -exec sh -c 'cat {}; echo ""' \; > all_reqs.txt && \
+    sed -i '/^comfy-kitchen/d;/^torch$/d;/^torchvision$/d;/^torchaudio$/d' all_reqs.txt && \
+    uv pip install --system --break-system-packages -r all_reqs.txt
+RUN uv pip install --system --break-system-packages \
+    huggingface_hub requests imageio-ffmpeg sageattention scikit-image opencv-python
+
+# 8. Настройка SSH для Vast.ai
 RUN mkdir /var/run/sshd && \
     echo 'root:root' | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
-# 8. Скрипт запуска
+# 9. Скрипт запуска
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
