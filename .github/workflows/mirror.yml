@@ -3,10 +3,6 @@ name: Mirror GHCR to Docker Hub
 on:
   workflow_dispatch:
     inputs:
-      tags:
-        description: Space-separated list of article-gen tags to mirror (empty to skip)
-        required: false
-        default: "flux3 zimage krea"
       legacy:
         description: Also mirror image-gen and video-gen
         type: boolean
@@ -14,9 +10,13 @@ on:
         default: false
 
 jobs:
-  mirror:
+  article-gen:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: [flux3, zimage, krea]
     steps:
       - name: Login to Docker Hub
         run: docker login docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
@@ -24,29 +24,32 @@ jobs:
       - name: Login to GHCR
         run: docker login ghcr.io -u slaid099 -p ${{ secrets.GHCR_PAT }}
 
-      - name: Mirror article-gen
-        if: inputs.tags != ''
-        env:
-          TAGS: ${{ inputs.tags }}
+      - name: Mirror ${{ matrix.tag }}
         run: |
           set -euo pipefail
-          for tag in $TAGS; do
-            echo "== $tag"
-            docker pull ghcr.io/slaid099/article-gen:$tag
-            docker tag ghcr.io/slaid099/article-gen:$tag \
-              ${{ secrets.DOCKERHUB_USERNAME }}/article-gen:$tag
-            docker push ${{ secrets.DOCKERHUB_USERNAME }}/article-gen:$tag
-          done
+          docker pull ghcr.io/slaid099/article-gen:${{ matrix.tag }}
+          docker tag ghcr.io/slaid099/article-gen:${{ matrix.tag }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/article-gen:${{ matrix.tag }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/article-gen:${{ matrix.tag }}
+
+  legacy:
+    if: inputs.legacy
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Login to Docker Hub
+        run: docker login docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        run: docker login ghcr.io -u slaid099 -p ${{ secrets.GHCR_PAT }}
 
       - name: Mirror image-gen
-        if: inputs.legacy
         run: |
           docker pull ghcr.io/slaid099/image-gen:latest
           docker tag ghcr.io/slaid099/image-gen:latest ${{ secrets.DOCKERHUB_USERNAME }}/image-gen:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/image-gen:latest
 
       - name: Mirror video-gen
-        if: inputs.legacy
         run: |
           docker pull ghcr.io/slaid099/video-gen:latest
           docker tag ghcr.io/slaid099/video-gen:latest ${{ secrets.DOCKERHUB_USERNAME }}/video-gen:latest
