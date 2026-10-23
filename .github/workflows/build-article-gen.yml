@@ -1,0 +1,43 @@
+name: Build article-gen images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  build:
+    name: article-gen:${{ matrix.model }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [flux3, zimage, krea]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo apt-get clean
+          df -h /
+
+      - name: Build image
+        run: |
+          docker build \
+            -f build/article-gen-${{ matrix.model }}/Dockerfile \
+            -t ghcr.io/slaid099/article-gen:${{ matrix.model }} .
+
+      - name: Show image size
+        run: docker image ls ghcr.io/slaid099/article-gen
+
+      - name: Login to GHCR
+        run: docker login ghcr.io -u slaid099 -p ${{ secrets.GHCR_PAT }}
+
+      - name: Push to GHCR
+        run: docker push ghcr.io/slaid099/article-gen:${{ matrix.model }}
